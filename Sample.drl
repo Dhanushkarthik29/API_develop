@@ -1,0 +1,377 @@
+package com.sample
+
+import com.sample.ProcessTest;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+global Connection connection;
+
+rule "check"
+ruleflow-group "connection"
+when
+	eval(ProcessTest.user_choice()==1 || ProcessTest.user_choice()==2 || ProcessTest.user_choice()==3);
+then	
+	String jdbcUrl = "jdbc:mysql://10.104.2.31:3343/insallconfigdbV2";
+    String username = "dhanushkrishna_k";
+    String password = "dolubolu@2024";
+    //connection=null;
+    try{
+    		Class.forName("com.mysql.cj.jdbc.Driver");
+            connection = DriverManager.getConnection(jdbcUrl, username, password);
+            kcontext.getKieRuntime().setGlobal("connection", connection);
+    }
+    catch(Exception e){
+    	System.out.println("e.printStackTrace(e)");
+    }
+end
+ 
+rule "Checking owner_id"
+ruleflow-group "rule2"
+when
+	eval(true);
+then
+		String owner_id = ProcessTest.owner();
+		String sql = "select ID,_DATA,INSURED_ID from SUB_SUBMISSION where OWNER_ID = ?  and _DATA IS NOT NULL limit 10";
+		System.out.println("-------------------------------------------");
+        System.out.println("Connection to the database was successful!");
+        System.out.println("-------------------------------------------");
+        try
+        {
+        	PreparedStatement ps = connection.prepareStatement(sql);
+        	ps.setString(1, owner_id);
+            try (ResultSet resultSet = ps.executeQuery())
+             { 
+             	if(!resultSet.isBeforeFirst()){
+            		System.out.println("Sorry Invalid owner_id plse give a correct owner_id");  	
+            	}
+            	else{  	
+            	while (resultSet.next())
+            	 {
+            		String idd=resultSet.getString("ID");
+            		String Data = resultSet.getString("_DATA");
+            		String id=resultSet.getString("INSURED_ID");
+            		//System.out.println(Data);
+            		if(Data==null || Data.isEmpty())
+            		{
+            			System.out.println("Data Not Found");
+            		}
+            		else
+            		{
+            		JsonObject jsonObject = new JsonParser().parse(Data).getAsJsonObject();
+            		//SubmissionNumber Checking and Printing
+            		if(jsonObject.has("SubmissionNumber")){
+            			JsonElement jsonElement = jsonObject.get("SubmissionNumber");
+            			if (jsonElement.isJsonNull()) 
+            			{
+                            System.out.println("SubmissionNumber : null");
+                        } 
+                        else 
+                        {
+                            System.out.println("SubmissionNumber : " +jsonElement.getAsString());
+                        }
+            		}
+            		else
+            		{
+            			System.out.println("There is No SubmissionNumber");
+            		}
+            		//EffectiveDate checking and Printing
+            		if(jsonObject.has("EffectiveDate")){
+            			JsonElement jsonElement = jsonObject.get("EffectiveDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("EffectiveDate : null");
+                        } else {
+                            System.out.println("EffectiveDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No EffectiveDate");
+            		}
+            		//ExpirationDate checking and Printing
+            		if(jsonObject.has("ExpirationDate")){
+            			JsonElement jsonElement = jsonObject.get("ExpirationDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("ExpirationDate : null");
+                        } else {
+                            System.out.println("ExpirationDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No ExpirationDate");
+            		}
+            		int count=0;
+            		//InsuredName checking and Printing
+            		if(jsonObject.has("Account"))
+            		{
+            		     JsonObject accountObject = jsonObject.getAsJsonObject("Account");
+    					//JsonArray insuredArray = jsonObject.getAsJsonArray("Account").getAsJsonObject().getAsJsonArray("Insured");
+    					//JsonObject jsonObject = new JsonParser().parse(jsonString).getAsJsonObject();
+						JsonArray insuredArray = accountObject.getAsJsonArray("Insured");
+						if (insuredArray != null ) {
+    						for (int i = 0; i < insuredArray.size(); i++) {
+        						JsonObject insuredObject = insuredArray.get(i).getAsJsonObject();
+        						String insuredName = insuredObject.get("InsuredName").getAsString();
+        						System.out.println("Insured Name: " + insuredName);
+    						}
+						}
+						else{
+							count=1;
+						}
+					 }
+					 else
+					 	count =1;
+					 	
+					 if(count==1)
+					 {
+						if(jsonObject.has("InsuredName"))
+						{
+            				JsonElement jsonElement = jsonObject.get("InsuredName");
+            				if (jsonElement.isJsonNull()) {
+                            	System.out.println("InsuredName : null");
+                        	} else {
+                            	System.out.println("InsuredName : " +jsonElement.getAsString());
+                        	}
+            			}
+            			else
+            			{
+            				System.out.println("There is No InsuredName");
+						}
+            		} 	
+            	}
+            	System.out.println("------------------------------------------");
+            }
+            }
+         	}
+         }
+         catch(Exception e){
+         	System.out.println("Could not find the JDBC driver. Make sure the driver is included in the project.");
+            System.out.println("Could not establish a connection to the database.");
+            e.printStackTrace(); 
+         }
+end
+ 
+rule "Checking submission_no"
+ruleflow-group "rule3"
+when
+	eval(true);
+then
+		String submission_number = ProcessTest.submission();
+		String sql = "select _DATA,INSURED_ID from SUB_SUBMISSION where SUBMISSION_NUMBER = ? limit 10";
+		System.out.println("-------------------------------------------");
+        System.out.println("Connection to the database was successful!");
+        System.out.println("-------------------------------------------");
+        try{
+        	PreparedStatement ps = connection.prepareStatement(sql);
+        	ps.setString(1, submission_number);
+            try (ResultSet resultSet = ps.executeQuery()) {
+            	if(!resultSet.isBeforeFirst()){
+            		System.out.println("Sorry Invalid submission_number plse give a correct submission_number");  	
+            	}
+            	else{   	
+            	while (resultSet.next()) { 
+            		String Data = resultSet.getString("_DATA");
+            		String id=resultSet.getString("INSURED_ID");
+            		//System.out.println(Data);
+            		JsonObject jsonObject = new JsonParser().parse(Data).getAsJsonObject();
+            		//SubmissionNumber Checking and Printing
+            		if(jsonObject.has("SubmissionNumber")){
+            			JsonElement jsonElement = jsonObject.get("SubmissionNumber");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("SubmissionNumber : null");
+                        } else {
+                            System.out.println("SubmissionNumber : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No Submission Number");
+            		}
+            		//EffectiveDate checking and Printing
+            		if(jsonObject.has("EffectiveDate")){
+            			JsonElement jsonElement = jsonObject.get("EffectiveDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("EffectiveDate : null");
+                        } else {
+                            System.out.println("EffectiveDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No EffectiveDate");
+            		}
+            		//ExpirationDate checking and Printing
+            		if(jsonObject.has("ExpirationDate")){
+            			JsonElement jsonElement = jsonObject.get("ExpirationDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("ExpirationDate : null");
+                        } else {
+                            System.out.println("ExpirationDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No Expiration Date");
+            		}
+            		int count=0;
+            		//InsuredName checking and Printing
+            		if(jsonObject.has("Account"))
+            		{
+            		     JsonObject accountObject = jsonObject.getAsJsonObject("Account");
+    					//JsonArray insuredArray = jsonObject.getAsJsonArray("Account").getAsJsonObject().getAsJsonArray("Insured");
+    					//JsonObject jsonObject = new JsonParser().parse(jsonString).getAsJsonObject();
+						JsonArray insuredArray = accountObject.getAsJsonArray("Insured");
+						if (insuredArray != null ) {
+    						for (int i = 0; i < insuredArray.size(); i++) {
+        						JsonObject insuredObject = insuredArray.get(i).getAsJsonObject();
+        						String insuredName = insuredObject.get("InsuredName").getAsString();
+        						System.out.println("Insured Name: " + insuredName);
+    						}
+						}
+						else{
+							count=1;
+						}
+					 }
+					 else
+					 	count=1;
+					 	
+					 if(count==1)
+					 {
+						if(jsonObject.has("InsuredName"))
+						{
+            				JsonElement jsonElement = jsonObject.get("InsuredName");
+            				if (jsonElement.isJsonNull()) {
+                            	System.out.println("InsuredName : null");
+                        	} else {
+                            	System.out.println("InsuredName : " +jsonElement.getAsString());
+                        	}
+            			}
+            			else
+            			{
+            				System.out.println("There is No InsuredName");
+						}
+            		} 	
+            	} 
+            	}
+            }
+            System.out.println("------------------------------------------");
+         }
+         catch(Exception e){
+         	System.out.println("Could not find the JDBC driver. Make sure the driver is included in the project.");
+            System.out.println("Could not establish a connection to the database.");
+            e.printStackTrace(); 
+         }
+end
+ 
+rule "Checking both owner_id and submission_no"
+ruleflow-group "rule4"
+when
+	eval(true);
+then
+		String input = ProcessTest.owner_submission();
+		String arr[] = input.split("/");
+		String sql = "select _DATA,INSURED_ID from SUB_SUBMISSION where OWNER_ID = ? and SUBMISSION_NUMBER=? limit 10";
+		System.out.println("-------------------------------------------");
+        System.out.println("Connection to the database was successful!");
+        System.out.println("-------------------------------------------");
+        try{
+        	PreparedStatement ps = connection.prepareStatement(sql);
+        	ps.setString(1, arr[0]);
+        	ps.setString(2, arr[1]);
+            try (ResultSet resultSet = ps.executeQuery()) { 
+            	if(!resultSet.isBeforeFirst()){
+            		System.out.println("Sorry Invalid owner_id and submission_number plse give a correct owner_id and submission_number");  	
+            	}
+            	else{
+            	while (resultSet.next()) {
+            		String Data = resultSet.getString("_DATA");
+            		String id=resultSet.getString("INSURED_ID");
+            		//System.out.println(Data);
+            		JsonObject jsonObject = new JsonParser().parse(Data).getAsJsonObject();
+            		//SubmissionNumber Checking and Printing
+            		if(jsonObject.has("SubmissionNumber")){
+            			JsonElement jsonElement = jsonObject.get("SubmissionNumber");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("SubmissionNumber : null");
+                        } else {
+                            System.out.println("SubmissionNumber : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No SubmissionNumber");
+            		}
+            		//EffectiveDate Checking and Printing
+            		if(jsonObject.has("EffectiveDate")){
+            			JsonElement jsonElement = jsonObject.get("EffectiveDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("EffectiveDate : null");
+                        } else {
+                            System.out.println("EffectiveDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No EffectiveDate");
+            		}
+            		//ExpirationDate Checking and Printing
+            		if(jsonObject.has("ExpirationDate")){
+            			JsonElement jsonElement = jsonObject.get("ExpirationDate");
+            			if (jsonElement.isJsonNull()) {
+                            System.out.println("ExpirationDate : null");
+                        } else {
+                            System.out.println("ExpirationDate : " +jsonElement.getAsString());
+                        }
+            		}
+            		else{
+            			System.out.println("There is No ExpirationDate");
+            		}
+            			//InsuredName checking and Printing
+            		int count=0;
+            		//InsuredName checking and Printing
+            		if(jsonObject.has("Account"))
+            		{
+            		     JsonObject accountObject = jsonObject.getAsJsonObject("Account");
+    					//JsonArray insuredArray = jsonObject.getAsJsonArray("Account").getAsJsonObject().getAsJsonArray("Insured");
+    					//JsonObject jsonObject = new JsonParser().parse(jsonString).getAsJsonObject();
+						JsonArray insuredArray = accountObject.getAsJsonArray("Insured");
+						if (insuredArray != null ) {
+    						for (int i = 0; i < insuredArray.size(); i++) {
+        						JsonObject insuredObject = insuredArray.get(i).getAsJsonObject();
+        						String insuredName = insuredObject.get("InsuredName").getAsString();
+        						System.out.println("Insured Name: " + insuredName);
+    						}
+						}
+						else{
+							count=1;
+						}
+					 }
+					 else
+					 	count=1;
+					 	
+					 if(count==1)
+					 {
+						if(jsonObject.has("InsuredName"))
+						{
+            				JsonElement jsonElement = jsonObject.get("InsuredName");
+            				if (jsonElement.isJsonNull()) {
+                            	System.out.println("InsuredName : null");
+                        	} else {
+                            	System.out.println("InsuredName : " +jsonElement.getAsString());
+                        	}
+            			}
+            			else
+            			{
+            				System.out.println("There is No InsuredName");
+						}
+            		} 	
+            	}
+            	}
+            }
+        }
+         catch(Exception e){
+         	System.out.println("Could not find the JDBC driver. Make sure the driver is included in the project.");
+            System.out.println("Could not establish a connection to the database.");
+            e.printStackTrace(); 
+         }
+end
